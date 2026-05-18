@@ -1100,7 +1100,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 1.308, y: 1.23, z: 0}
-  m_LocalScale: {x: 1, y: 0.6731661, z: 1}
+  m_LocalScale: {x: 1, y: 0.67, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 838209301}
@@ -2309,7 +2309,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.40165636, y: 0.5474, z: 0}
-  m_LocalScale: {x: 1, y: 2.0380445, z: 1}
+  m_LocalScale: {x: 1, y: 2.03, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 838209301}
@@ -2558,10 +2558,8 @@ MonoBehaviour:
   crouchHeight: 0.5
   player: {fileID: 1369177798}
   headCheck: {fileID: 1984932286}
+  headCheck1: {fileID: 0}
   headCheckLength: 1.25
-  GroundLayer:
-    serializedVersion: 2
-    m_Bits: 8
 --- !u!50 &1369177797
 Rigidbody2D:
   serializedVersion: 5
