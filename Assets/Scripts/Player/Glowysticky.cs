@@ -1,115 +1,120 @@
 using UnityEngine;
 using System.Collections;
 
-public class GlowStickMaster : MonoBehaviour
+public class GlowStick2D : MonoBehaviour
 {
-    [Header("Shake Logic")]
+    [Header("Shaking & Light")]
     private int targetShakes;
     private int currentShakes = 0;
-    public float moveDistance = 0.1f;
-    private Vector3 originalLocalPos;
-
-    [Header("Lighting")]
+    public float shakeDistance = 0.5f;
     public Light stickLight;
 
-    [Header("Throwing & Trajectory")]
-    public LineRenderer trajectoryLine;
-    public GameObject glowStickPrefab;
-    public Transform throwPoint; 
-    public float throwForce = 15f;
-
-    [Header("Camera Shake")]
-    public float camShakeDuration = 0.1f;
-    public float camShakeAmount = 0.05f;
+    [Header("Throwing")]
+    public LineRenderer line;
+    public Transform handPoint; 
+    public float throwPower = 10f;
+    private bool isThrown = false;
 
     void Start()
     {
-        originalLocalPos = transform.localPosition;
-        // Pick random number between 5 and 10
         targetShakes = Random.Range(5, 11);
+        if (stickLight) stickLight.enabled = false;
         
-        if(stickLight != null) stickLight.enabled = false;
-        if(trajectoryLine != null) trajectoryLine.enabled = false;
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb) rb.bodyType = RigidbodyType2D.Kinematic;
     }
 
     void Update()
     {
-        // 1. Shaking Logic (F Key)
+        if (isThrown) return;
+
+        // 1. Follow Player Hand
+        if (handPoint != null)
+        {
+            transform.position = handPoint.position;
+        }
+
+        // 2. Shake Logic (F Key)
         if (Input.GetKeyDown(KeyCode.F))
         {
             currentShakes++;
-            HandleStickVisualShake();
+            StartCoroutine(VisualBounce());
 
-            if (currentShakes == targetShakes)
+            if (currentShakes >= targetShakes && stickLight)
             {
-                if(stickLight != null) stickLight.enabled = true;
-                Debug.Log("You got light!");
+                stickLight.enabled = true;
             }
         }
 
-        // 2. Trajectory Logic (Hold T)
+        // 3. Trajectory & Throw (T Key)
         if (Input.GetKey(KeyCode.T))
         {
-            trajectoryLine.enabled = true;
-            UpdateTrajectory();
+            if (line != null) 
+            {
+                line.enabled = true;
+                DrawTrajectory2D();
+            }
         }
-
-        // 3. Throw Logic (Release T)
+        
         if (Input.GetKeyUp(KeyCode.T))
         {
-            ThrowStick();
-            trajectoryLine.enabled = false;
+            if (line != null) line.enabled = false;
+            Throw2D();
         }
     }
 
-    void HandleStickVisualShake()
+    IEnumerator VisualBounce()
     {
-        // Simple up/down toggle relative to home position
-        if (currentShakes % 2 != 0)
-            transform.localPosition = originalLocalPos + new Vector3(0, moveDistance, 0);
-        else
-            transform.localPosition = originalLocalPos;
-            
-        StartCoroutine(ShakeCamera());
+        transform.localPosition += new Vector3(0, shakeDistance, 0);
+        yield return new WaitForSeconds(0.05f);
+        transform.localPosition -= new Vector3(0, shakeDistance, 0);
     }
 
-    void UpdateTrajectory()
+    void DrawTrajectory2D()
     {
-        Vector3 startPos = throwPoint.position;
-        Vector3 startVelocity = Camera.main.transform.forward * throwForce;
-        int points = 20;
-        trajectoryLine.positionCount = points;
+        int points = 15;
+        line.positionCount = points;
+        Vector2 startPos = transform.position;
+        
+        Vector2 mPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        Vector2 direction = (mPos - startPos).normalized;
+        Vector2 velocity = direction * throwPower;
 
         for (int i = 0; i < points; i++)
         {
-            float time = i * 0.1f;
-            Vector3 pos = startPos + startVelocity * time + 0.5f * Physics.gravity * time * time;
-            trajectoryLine.SetPosition(i, pos);
+            float t = i * 0.1f;
+            Vector2 point = startPos + (velocity * t) + 0.5f * Physics2D.gravity * (t * t);
+            line.SetPosition(i, point);
         }
     }
 
-    void ThrowStick()
+    void Throw2D()
     {
-        GameObject obj = Instantiate(glowStickPrefab, throwPoint.position, throwPoint.rotation);
-        obj.GetComponent<Rigidbody>().AddForce(Camera.main.transform.forward * throwForce, ForceMode.Impulse);
-        
-        // Transfer the light state to the thrown object
-        Light l = obj.GetComponentInChildren<Light>();
-        if(l != null) l.enabled = stickLight.enabled;
-    }
-
-    IEnumerator ShakeCamera()
-    {
-        Vector3 camOriginalPos = Camera.main.transform.localPosition;
-        float elapsed = 0f;
-        while (elapsed < camShakeDuration)
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb)
         {
-            float x = Random.Range(-1f, 1f) * camShakeAmount;
-            float y = Random.Range(-1f, 1f) * camShakeAmount;
-            Camera.main.transform.localPosition = camOriginalPos + new Vector3(x, y, 0);
-            elapsed += Time.deltaTime;
-            yield return null;
+            isThrown = true;
+            transform.SetParent(null);
+            rb.bodyType = RigidbodyType2D.Dynamic;
+
+            Vector2 mPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector2 dir = (mPos - (Vector2)transform.position).normalized;
+            rb.AddForce(dir * throwPower, ForceMode2D.Impulse);
         }
-        Camera.main.transform.localPosition = camOriginalPos;
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (isThrown)
+        {
+            Rigidbody2D rb = GetComponent<Rigidbody2D>();
+            if (rb)
+            {
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0;
+                rb.bodyType = RigidbodyType2D.Kinematic;
+                transform.SetParent(collision.transform);
+            }
+        }
     }
 }
